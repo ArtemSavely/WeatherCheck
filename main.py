@@ -42,7 +42,7 @@ class WeatherSearchBar(SearchBar):
         self.page = page
         self.full_screen = True
         self.bar_hint_text = "Где посмотрим погоду?"
-        self.on_submit = self.get_weather
+        self.on_submit = self.get_search_request_from_bar
         self.on_tap = lambda e: self.open_view()
         self.cities = []
         self.user_cities = []
@@ -57,11 +57,17 @@ class WeatherSearchBar(SearchBar):
         self.controls = []
         for i in ['Москва', "Лондон", "Париж", "Нью-Йорк", "Токио", "Сидней"]:
             self.controls.append(
-                ListTile(title=i, on_click=self.get_weather, data=i)
+                ListTile(title=StringField(value=i, size=15), on_click=self.get_search_request_from_control, data=i)
             )
 
-    def get_weather(self, e):
-        query = e.data
+
+    def get_search_request_from_control(self, e):
+        self.get_weather(e.control.data)
+
+    def get_search_request_from_bar(self, e):
+        self.get_weather(e.data)
+
+    def get_weather(self, query):
         params = {
             "lang": 'ru',
             "access_key": API_KEY,
@@ -77,7 +83,6 @@ class WeatherSearchBar(SearchBar):
         request = requests.get(f"http://api.weatherstack.com/current", params=params)
         if request.status_code == 200:
             result = request.json()
-            print(result)
             self.close_view()
             self.page.update()
             if "success" not in result:
@@ -128,6 +133,7 @@ def main(page: Page):
     #     current_weather.update_weather(page.client_storage.get('cities')[-1])
 
     search_bar = WeatherSearchBar(page=page)
+
     page.add(
         Container(
             content=Column(
@@ -171,29 +177,29 @@ def main(page: Page):
         )
     )
 
-    # if page.client_storage.contains_key('cities') == False:
-    #     page.client_storage.set('cities', [])
-    #     page.overlay.append(
-    #         Container(
-    #             width=800,
-    #             height=800,
-    #             bgcolor=Colors.WHITE,
-    #             content=Column(
-    #                 controls=[
-    #                     Container(
-    #                         content=StringField(
-    #                             value="Добро пожаловать в WeatherCheck!",
-    #                             color=Colors.BLUE_700,
-    #                             size=50,
-    #                             text_align=TextAlign.CENTER
-    #                         ),
-    #                         margin=40
-    #                     ),
-    #                     search_bar
-    #                 ]
-    #             )
-    #         )
-    #     )
-    #     page.update()
+    if page.client_storage.contains_key('cities') == False:
+        page.client_storage.set('cities', [])
+        page.overlay.append(
+            Container(
+                width=800,
+                height=800,
+                bgcolor=Colors.WHITE,
+                content=Column(
+                    controls=[
+                        Container(
+                            content=StringField(
+                                value="Добро пожаловать в WeatherCheck!",
+                                color=Colors.BLUE_700,
+                                size=50,
+                                text_align=TextAlign.CENTER
+                            ),
+                            margin=40
+                        ),
+                        WeatherSearchBar(page=page)
+                    ]
+                )
+            )
+        )
+        page.update()
 
 app(target=main)
