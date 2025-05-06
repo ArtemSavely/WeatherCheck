@@ -1,3 +1,4 @@
+from cookiecutter.utils import work_in
 from flet import *
 import requests
 
@@ -5,32 +6,59 @@ API_KEY = 'e68c4de4bbb92f4801d22d1a96059b1d'
 
 
 class StringField(Text):
-    def __init__(self, size, value, color=Colors.WHITE):
+    def __init__(self, size, value, color=Colors.WHITE, text_align=TextAlign.JUSTIFY):
         super().__init__()
         self.value = value
         self.size = size
         self.color = color
         self.weight = FontWeight.BOLD
+        self.text_align = text_align
 
 
 class CurrentWeather:
-    def __init__(
-            self,
-            city,
-            temperature,
+    def __init__(self, page):
+        self.page = page
 
-    ):
-        self.temperature = temperature
-        self.city = city
+
+    def update_weather(self, city_for_search):
+        params = {
+            "lang": 'ru',
+            "access_key": API_KEY,
+            "query": city_for_search
+        }
+        request = requests.get(f"http://api.weatherstack.com/current", params=params)
+        result = request.json()
+        temperature.value = result['current']['temperature']
+        wind_dir.value = result['current']['wind_dir']
+        wind_speed.value = result['current']['wind_speed']
+        city.value = result['location']['name'].title()
+        self.page.update()
+
 
 
 class WeatherSearchBar(SearchBar):
     def __init__(self, page):
         super().__init__()
         self.page = page
+        self.full_screen = True
         self.bar_hint_text = "Где посмотрим погоду?"
         self.on_submit = self.get_weather
         self.on_tap = lambda e: self.open_view()
+        self.cities = []
+        self.user_cities = []
+        self.error_bottom_sheet = BottomSheet(
+                content=Container(
+                    padding=35,
+                    content=StringField(value="", size=25, text_align=TextAlign.CENTER)
+                ),
+                dismissible=True,
+                show_drag_handle=True
+            )
+        self.controls = []
+        for i in ['Москва', "Лондон", "Париж", "Нью-Йорк", "Токио", "Сидней"]:
+            self.controls.append(
+                ListTile(title=i, on_click=self.get_weather, data=i)
+            )
 
     def get_weather(self, e):
         query = e.data
@@ -39,15 +67,40 @@ class WeatherSearchBar(SearchBar):
             "access_key": API_KEY,
             "query": query
         }
-        request = requests.get(f"http://api.weatherstack.com/current", params=params).json()
-        temperature.value = request['current']['temperature']
-        print(request)
-        self.close_view()
-        self.page.update()
+        cities = self.page.client_storage.get('cities')
+        cities.append(query)
+        self.page.client_storage.set('cities', cities)
+        if query in self.user_cities:
+            index = self.user_cities.index(query)
+            city_pop = self.user_cities.pop(index)
+            self.user_cities.append(query)
+        request = requests.get(f"http://api.weatherstack.com/current", params=params)
+        if request.status_code == 200:
+            result = request.json()
+            print(result)
+            self.close_view()
+            self.page.update()
+            if "success" not in result:
+                temperature.value = result['current']['temperature']
+                wind_dir.value = result['current']['wind_dir']
+                wind_speed.value = result['current']['wind_speed']
+                city.value = result['location']['name'].title()
+                self.page.overlay.clear()
+                self.page.update()
+            else:
+                self.error_bottom_sheet.content.content.value = "Упс, подобного города не нашлось:(\nМожет вы сделали опечатку?"
+                self.page.overlay.append(self.error_bottom_sheet)
+                self.page.update()
+                self.page.open(self.error_bottom_sheet)
+        else:
+            self.error_bottom_sheet.content.content.value = "Упс, кажется, нам не удалось отправить запрос\tМожет попробуем еще раз?"
+            self.page.overlay.append(self.error_bottom_sheet)
+            self.page.open(self.error_bottom_sheet)
 
 
 
 
+#   москва
 # e68c4de4bbb92f4801d22d1a96059b1d
 # API_KEY = 'e68c4de4bbb92f4801d22d1a96059b1d'
 # print(request['current']['weather_descriptions'])
@@ -56,16 +109,23 @@ class WeatherSearchBar(SearchBar):
 # translation = translator.translate('hi')
 # print(translation)
 
-temperature = StringField(size=30, value="temp")
-city = StringField(size=25, value="city")
+temperature = StringField(size=95, value="temp", color=Colors.BLACK)
+city = StringField(size=30, value="city")
+wind_speed = StringField(value="speed", size=20)
+wind_dir = StringField(value="dir", size=20)
+#ccurrent_weather = CurrentWeather()
 
-Text()
+
 def main(page: Page):
     page.title = "WeatherCheck"
     page.bgcolor = Colors.BLUE
     page.window.width = 350
     page.window.height = 700
     page.theme_mode = ThemeMode.DARK
+    page.client_storage.clear()
+    # if page.client_storage.contains_key('cities'):
+    #     current_weather = CurrentWeather(page=page)
+    #     current_weather.update_weather(page.client_storage.get('cities')[-1])
 
     search_bar = WeatherSearchBar(page=page)
     page.add(
@@ -75,13 +135,65 @@ def main(page: Page):
                     Container(
                         border_radius=40,
                         bgcolor=Colors.BLACK,
-                        content=search_bar
+                        content=search_bar,
+                        margin=20,
                     ),
                     city,
-                    temperature
+                    Row(
+                        alignment=MainAxisAlignment.CENTER,
+                        controls=[
+                            Container(
+                                content=temperature,
+                                width=250,
+                                height=250,
+                                shape=BoxShape.CIRCLE,
+                                bgcolor=Colors.WHITE,
+                                alignment=alignment.center
+                            )
+                        ]
+                    ),
+                    Container(
+                        margin=20,
+                        content=Row(
+                            controls=[
+                                Column(
+                                    controls=[
+                                        Icon(name=Icons.AIR_ROUNDED),
+                                        wind_speed,
+                                        wind_dir
+                                    ]
+                                )
+                            ]
+                        )
+                    )
                 ]
             )
         )
     )
+
+    # if page.client_storage.contains_key('cities') == False:
+    #     page.client_storage.set('cities', [])
+    #     page.overlay.append(
+    #         Container(
+    #             width=800,
+    #             height=800,
+    #             bgcolor=Colors.WHITE,
+    #             content=Column(
+    #                 controls=[
+    #                     Container(
+    #                         content=StringField(
+    #                             value="Добро пожаловать в WeatherCheck!",
+    #                             color=Colors.BLUE_700,
+    #                             size=50,
+    #                             text_align=TextAlign.CENTER
+    #                         ),
+    #                         margin=40
+    #                     ),
+    #                     search_bar
+    #                 ]
+    #             )
+    #         )
+    #     )
+    #     page.update()
 
 app(target=main)
