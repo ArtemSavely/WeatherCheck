@@ -313,7 +313,7 @@ class WeatherSearchBar(SearchBar):
 
 
 current_weather = CurrentWeather(page=0)
-temperature = StringField(size=95, value="temp", color=Colors.WHITE)
+temperature = StringField(size=90, value="temp", color=Colors.WHITE)
 city = StringField(size=30, value="city")
 wind_speed = StringField(value="speed", size=20)
 wind_dir = StringField(value="dir", size=20)
@@ -371,7 +371,6 @@ def main(page: Page):
                         Container(
                             alignment=alignment.center,
                             border_radius=40,
-                            width=300,
                             content=WeatherSearchBar(page=page),
                             margin=20,
                         ),
@@ -399,7 +398,6 @@ def main(page: Page):
                     Container(
                         alignment=alignment.center,
                         border_radius=40,
-                        #width=300,
                         content=search_bar,
                         margin=20,
                     ),
@@ -422,7 +420,7 @@ def main(page: Page):
                                         top=20
                                     ),
                                     Container(
-                                        content=temperature, left=70, top=90, width=170, alignment=alignment.center,
+                                        content=temperature, left=65, top=90, width=220, alignment=alignment.center,
                                     ),
                                 ]
                             )
