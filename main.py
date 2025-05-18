@@ -68,7 +68,10 @@ def get_weather_icon_src(condition, is_day):
     if condition.lower() in weather_icons:
         icon_result = weather_icons[condition.lower()]
     else:
-        icon_result = ['moon_cloud', 'cloud_sun']
+        if 'rain' in condition.lower() or 'drizzle' in condition.lower():
+            icon_result = 'rain'
+        else:
+            icon_result = ['moon_cloud', 'cloud_sun']
     if type(icon_result) == list:
         icon_src = f'assets/{icon_result[is_day]}.png'
     else:
@@ -200,6 +203,10 @@ class CurrentWeather:
         for i in range(current_hour, 24):
             hour_forecast.content.controls.append(
                 HourForecastInfo(result['forecast']['forecastday'][0]['hour'][i])
+            )
+        for i in range(0, current_hour):
+            hour_forecast.content.controls.append(
+                HourForecastInfo(result['forecast']['forecastday'][1]['hour'][i])
             )
         print(current_hour)
         print(self.page.bgcolor)
@@ -362,6 +369,7 @@ def main(page: Page):
                             margin=40
                         ),
                         Container(
+                            alignment=alignment.center,
                             border_radius=40,
                             width=300,
                             content=WeatherSearchBar(page=page),
@@ -389,8 +397,9 @@ def main(page: Page):
             content=Column(
                 controls=[
                     Container(
+                        alignment=alignment.center,
                         border_radius=40,
-                        width=300,
+                        #width=300,
                         content=search_bar,
                         margin=20,
                     ),
@@ -409,11 +418,11 @@ def main(page: Page):
                                     ),
                                     Container(
                                         content=weather_icon_image,
-                                        left=35,
+                                        left=20,
                                         top=20
                                     ),
                                     Container(
-                                        content=temperature, left=95, top=90, width=170, alignment=alignment.center,
+                                        content=temperature, left=70, top=90, width=170, alignment=alignment.center,
                                     ),
                                 ]
                             )
@@ -456,7 +465,6 @@ def main(page: Page):
                                     controls=[
                                         Image(src='assets/sunrise.png', height=40),
                                         StringField(value='Восход', size=16),
-                                        #StringField(value=current_weather.full_weather_result['forecast']['forecastday'][0]['astro']['sunrise'], size=18)
                                         sunrise
                                     ]
                                 ),
@@ -465,7 +473,6 @@ def main(page: Page):
                                     controls=[
                                         Image(src='assets/sunset.png', height=40),
                                         StringField(value='Закат', size=16),
-                                        #StringField(value=current_weather.full_weather_result['forecast']['forecastday'][0]['astro']['sunset'], size=18)
                                         sunset
                                     ]
                                 )
