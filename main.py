@@ -133,7 +133,6 @@ class DayForecastInfo(Container):
                 )
             ]
         )
-        print(f'{str(int(forecast['day']['maxtemp_c']))}{chr(176)}')
         self.border_radius = 30
         self.padding = 20
         self.height = 70
@@ -185,7 +184,6 @@ class CurrentWeather:
         condition_original_text = result['current']['condition']['text']
         icon_src = get_weather_icon_src(condition_original_text, result['current']['is_day'])
         weather_icon_image.src = icon_src
-        print(weather_icon_image.src)
         condition.value = f'{translator.translate(condition_original_text)}\nОщущается как {int(result['current']['feelslike_c'])}{chr(176)}'
         pressure.value = str(int(result['current']['pressure_mb'])) + ' мбар'
         vis_km.value = str(int(result['current']['vis_km'])) + ' км'
@@ -208,8 +206,6 @@ class CurrentWeather:
             hour_forecast.content.controls.append(
                 HourForecastInfo(result['forecast']['forecastday'][1]['hour'][i])
             )
-        print(current_hour)
-        print(self.page.bgcolor)
         self.page.overlay.clear()
         self.page.update()
 
@@ -217,7 +213,6 @@ class CurrentWeather:
     def get_weather(self, city_for_search):
         params = {'q': city_for_search, "days":"3"}
         request = requests.get(url, headers=headers, params=params)
-        print(request.status_code)
         if request.status_code == 200:
             result = request.json()
             if "success" not in result:
@@ -232,10 +227,6 @@ class CurrentWeather:
             self.error_bottom_sheet.content.content.value = "Упс, кажется, нам не удалось отправить запрос\tМожет попробуем еще раз?"
             self.page.overlay.append(self.error_bottom_sheet)
             self.page.open(self.error_bottom_sheet)
-
-
-        print(request.json())
-
 
 
 class WeatherSearchBar(SearchBar):
@@ -264,11 +255,23 @@ class WeatherSearchBar(SearchBar):
         self.base_cities = ['Москва', "Лондон", "Париж", "Нью-Йорк", "Токио", "Сидней"]
         self.update_search_history()
 
+    def del_list_tile(self, e):
+        recent = self.page.client_storage.get('cities')
+        recent.remove(e.control.data)
+        self.page.client_storage.set('cities', recent)
+        self.controls.remove(e.control)
+        snack_bar = SnackBar(content=Row(
+            [StringField(value=f"Поисковый запрос удален", size=15), Icon(Icons.DELETE, color=Colors.WHITE, size=25)]),
+            bgcolor=Colors.BLUE_900)
+        self.close_view()
+        self.page.open(snack_bar)
+        self.page.update()
+
     def update_search_history(self):
         self.controls.clear()
         for i in self.page.client_storage.get('cities')[::-1]:
             self.controls.append(
-                ListTile(title=StringField(value=i, size=15), on_click=self.get_search_request_from_control, data=i, trailing=Icon(name=Icons.ACCESS_TIME_ROUNDED))
+                ListTile(title=StringField(value=i, size=15), on_click=self.get_search_request_from_control, on_long_press=self.del_list_tile, data=i, trailing=Icon(name=Icons.ACCESS_TIME_ROUNDED))
             )
         for i in self.base_cities:
             self.controls.append(
@@ -292,11 +295,9 @@ class WeatherSearchBar(SearchBar):
         #if query not in self.base_cities:
         cities.append(query)
         self.page.client_storage.set('cities', cities)
-        print(cities)
         self.update_search_history()
         if request.status_code == 200:
             result = request.json()
-            print(result)
             self.close_view()
             self.page.update()
             if "success" not in result:
@@ -346,7 +347,7 @@ def main(page: Page):
     page.window.width = 350
     page.window.height = 700
     page.theme_mode = ThemeMode.DARK
-    page.scroll = True
+    page.scroll = ScrollMode.HIDDEN
     #page.client_storage.clear()
 
 
@@ -382,7 +383,6 @@ def main(page: Page):
 
     current_weather.page = page
     if page.client_storage.contains_key('cities'):
-        print(page.client_storage.get('cities'))
         current_weather.get_weather(page.client_storage.get('cities')[-1])
         page.bgcolor = backgrounds[current_weather.full_weather_result['current']['is_day']]
     else:
