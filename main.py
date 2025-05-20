@@ -289,18 +289,17 @@ class WeatherSearchBar(SearchBar):
     def get_weather(self, query):
         params = {'q': query, "days":"3"}
         request = requests.get(url, headers=headers, params=params)
-        cities = self.page.client_storage.get('cities')
-        if query in cities:
-            cities.remove(query)
-        #if query not in self.base_cities:
-        cities.append(query)
-        self.page.client_storage.set('cities', cities)
-        self.update_search_history()
         if request.status_code == 200:
             result = request.json()
             self.close_view()
             self.page.update()
             if "success" not in result:
+                cities = self.page.client_storage.get('cities')
+                if query in cities:
+                    cities.remove(query)
+                cities.append(query)
+                self.page.client_storage.set('cities', cities)
+                self.update_search_history()
                 current_weather.update_screen_info(result)
             else:
                 self.error_bottom_sheet.content.content.value = "Упс, подобного города не нашлось:(\nМожет вы сделали опечатку?"
@@ -310,6 +309,7 @@ class WeatherSearchBar(SearchBar):
         else:
             self.error_bottom_sheet.content.content.value = "Упс, кажется, нам не удалось отправить запрос\tМожет попробуем еще раз?"
             self.page.overlay.append(self.error_bottom_sheet)
+            self.page.update()
             self.page.open(self.error_bottom_sheet)
 
 
@@ -337,7 +337,7 @@ hour_forecast = Container(
     bgcolor = "#40000000",
     content=Row(
         controls=[],
-        scroll=ScrollMode.HIDDEN
+        scroll=ScrollMode.AUTO
     )
 )
 
@@ -382,7 +382,7 @@ def main(page: Page):
         page.update()
 
     current_weather.page = page
-    if page.client_storage.contains_key('cities'):
+    if page.client_storage.contains_key('cities') and page.client_storage.get('cities'):
         current_weather.get_weather(page.client_storage.get('cities')[-1])
         page.bgcolor = backgrounds[current_weather.full_weather_result['current']['is_day']]
     else:
